@@ -16,7 +16,8 @@
             --panel-bg: rgba(15, 23, 42, 0.8);
             --panel-border: rgba(0, 180, 216, 0.35);
             --sun-color: #ffb703;
-            --moon-color: #e2e8f0;
+            --moon-dark: #151f32;
+            --moon-light: #f8fafc;
         }
 
         [data-season="summer"] {
@@ -187,7 +188,7 @@
             transform: translate(-50%, -50%);
             left: 50%;
             top: 50%;
-            transition: left 0.5s cubic-bezier(0.1, 0.8, 0.3, 1), top 0.5s cubic-bezier(0.1, 0.8, 0.3, 1), box-shadow 0.5s;
+            transition: left 0.5s cubic-bezier(0.1, 0.8, 0.3, 1), top 0.5s cubic-bezier(0.1, 0.8, 0.3, 1);
             z-index: 3;
         }
 
@@ -197,21 +198,30 @@
             display: none;
         }
 
+        /* Advanced Multilayer Moon Matrix */
         .moon {
-            background: radial-gradient(circle, #ffffff 40%, var(--moon-color) 80%);
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+            background: var(--moon-dark);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.25);
             display: none;
             overflow: hidden;
         }
 
-        .moon-phase-shadow {
+        .moon-half-base {
             position: absolute;
             top: 0;
-            left: 0;
-            width: 100%;
+            width: 50%;
             height: 100%;
-            background: rgba(10, 15, 30, 0.88);
-            border-radius: 50%;
+        }
+
+        #moonLeft { left: 0; }
+        #moonRight { left: 50%; }
+
+        .moon-morpher {
+            position: absolute;
+            top: 0;
+            width: 50%;
+            height: 100%;
+            transition: transform 0.5s ease;
         }
 
         .horizon-line {
@@ -243,12 +253,12 @@
         /* --- HORIZON CENTERED TELEMETRY HUD --- */
         .dashboard-ui {
             position: absolute;
-            bottom: 40px; /* Sitting directly flush on top of the horizon line */
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
             width: 92%;
             max-width: 960px;
-            z-index: 6; /* Layered safely above the horizon line and weather elements */
+            z-index: 6;
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
@@ -264,7 +274,7 @@
             border-radius: 12px;
             pointer-events: auto;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s;
+            transition: transform 0.3s ease, border-color 0.3s;
         }
 
         .card:hover {
@@ -369,23 +379,12 @@
             100% { transform: translateX(50%); }
         }
 
-        /* Responsive Optimization for Horizon Dock */
+        /* Responsive Optimization */
         @media(max-width: 768px) {
-            .dashboard-ui {
-                grid-template-columns: 1fr;
-                bottom: 45px;
-                width: 95%;
-                gap: 8px;
-            }
-            .card {
-                padding: 10px 15px;
-            }
-            .card p {
-                font-size: 1.1rem;
-            }
-            .sky-stage {
-                min-height: 600px; /* Gives elements space to stack vertically on mobile */
-            }
+            .dashboard-ui { grid-template-columns: 1fr; bottom: 45px; width: 95%; gap: 8px; }
+            .card { padding: 10px 15px; }
+            .card p { font-size: 1.1rem; }
+            .sky-stage { min-height: 600px; }
         }
 
         @media(max-width: 600px) {
@@ -434,7 +433,9 @@
 
         <div class="celestial-orb sun" id="sunOrb"></div>
         <div class="celestial-orb moon" id="moonOrb">
-            <div class="moon-phase-shadow" id="moonShadow"></div>
+            <div class="moon-half-base" id="moonLeft"></div>
+            <div class="moon-half-base" id="moonRight"></div>
+            <div class="moon-morpher" id="moonMorph"></div>
         </div>
 
         <div class="dashboard-ui">
@@ -484,20 +485,15 @@
             newyork: { name: "New York", lat: 40.7128, lon: -74.0060, tz: -5, hem: "N" }
         };
 
-        // State Tracking
         let selectedCity = CITY_DIRECTORY.melbourne;
         let dynamicOffset = selectedCity.tz;
         let isDst = false;
-        let weatherState = "clear"; 
         let customSunrise = null;
         let customSunset = null;
 
-        // Element DOM Mapping
         const body = document.documentElement;
         const sunOrb = document.getElementById('sunOrb');
         const moonOrb = document.getElementById('moonOrb');
-        const moonShadow = document.getElementById('moonShadow');
-        const skyStage = document.getElementById('skyStage');
         const starsOverlay = document.getElementById('starsOverlay');
         const cloudsOverlay = document.getElementById('cloudsOverlay');
         const rainOverlay = document.getElementById('rainOverlay');
@@ -529,7 +525,7 @@
             dateDisplay.textContent = targetDate.toLocaleDateString('en-US', options);
         }
 
-        // --- CALCULATE LUNAR PHASES ---
+        // --- HEMISPHERE-AWARE LUNAR PHASE SHADER ---
         function updateLunarCycle(date) {
             const baseNewMoon = new Date(2000, 0, 6, 18, 14, 0);
             const totalMsDiff = date.getTime() - baseNewMoon.getTime();
@@ -539,37 +535,72 @@
             const phaseNormalized = absolutePhase < 0 ? absolutePhase + 1 : absolutePhase;
 
             let phaseName = "";
-            let shadowStyle = "";
-
-            if (phaseNormalized < 0.03 || phaseNormalized > 0.97) {
-                phaseName = "New Moon";
-                shadowStyle = "inset 0 0 40px rgba(0,0,0,0.95)";
-            } else if (phaseNormalized >= 0.03 && phaseNormalized < 0.22) {
-                phaseName = "Waxing Crescent";
-                shadowStyle = "box-shadow: inset -22px 0 0 0 rgba(0,0,0,0.85);";
-            } else if (phaseNormalized >= 0.22 && phaseNormalized < 0.28) {
-                phaseName = "First Quarter";
-                shadowStyle = "box-shadow: inset -25px 0 0 0 rgba(0,0,0,0.85);";
-            } else if (phaseNormalized >= 0.28 && phaseNormalized < 0.47) {
-                phaseName = "Waxing Gibbous";
-                shadowStyle = "box-shadow: inset -10px 0 0 0 rgba(0,0,0,0.4);";
-            } else if (phaseNormalized >= 0.47 && phaseNormalized < 0.53) {
-                phaseName = "Full Moon";
-                shadowStyle = "box-shadow: inset 0 0 0 0 transparent;";
-            } else if (phaseNormalized >= 0.53 && phaseNormalized < 0.72) {
-                phaseName = "Waning Gibbous";
-                shadowStyle = "box-shadow: inset 10px 0 0 0 rgba(0,0,0,0.4);";
-            } else if (phaseNormalized >= 0.72 && phaseNormalized < 0.78) {
-                phaseName = "Last Quarter";
-                shadowStyle = "box-shadow: inset 25px 0 0 0 rgba(0,0,0,0.85);";
-            } else {
-                phaseName = "Waning Crescent";
-                shadowStyle = "box-shadow: inset 22px 0 0 0 rgba(0,0,0,0.85);";
-            }
+            if (phaseNormalized < 0.03 || phaseNormalized > 0.97) phaseName = "New Moon";
+            else if (phaseNormalized >= 0.03 && phaseNormalized < 0.22) phaseName = "Waxing Crescent";
+            else if (phaseNormalized >= 0.22 && phaseNormalized < 0.28) phaseName = "First Quarter";
+            else if (phaseNormalized >= 0.28 && phaseNormalized < 0.47) phaseName = "Waxing Gibbous";
+            else if (phaseNormalized >= 0.47 && phaseNormalized < 0.53) phaseName = "Full Moon";
+            else if (phaseNormalized >= 0.53 && phaseNormalized < 0.72) phaseName = "Waning Gibbous";
+            else if (phaseNormalized >= 0.72 && phaseNormalized < 0.78) phaseName = "Last Quarter";
+            else phaseName = "Waning Crescent";
 
             document.getElementById('lunarTxt').textContent = phaseName;
-            document.getElementById('lunarSub').textContent = `Cycle Value: ${(phaseNormalized * 100).toFixed(1)}%`;
-            moonShadow.style.cssText = shadowStyle;
+            document.getElementById('lunarSub').textContent = `Illumination: ${(phaseNormalized * 100).toFixed(1)}%`;
+
+            renderAccurateMoonGraphic(phaseNormalized, selectedCity.hem);
+        }
+
+        function renderAccurateMoonGraphic(phase, hemisphere) {
+            const moonLeft = document.getElementById('moonLeft');
+            const moonRight = document.getElementById('moonRight');
+            const moonMorph = document.getElementById('moonMorph');
+
+            // Handle astronomical horizontal reversal between Northern and Southern viewpoints
+            if (hemisphere === "N") {
+                moonOrb.style.transform = "translate(-50%, -50%) scaleX(-1)";
+            } else {
+                moonOrb.style.transform = "translate(-50%, -50%) scaleX(1)";
+            }
+
+            const dark = "var(--moon-dark)";
+            const light = "var(--moon-light)";
+
+            if (phase >= 0 && phase < 0.25) {
+                // Waxing Crescent: Left side begins growing light (Southern hemisphere configuration)
+                moonLeft.style.backgroundColor = dark;
+                moonRight.style.backgroundColor = dark;
+                moonMorph.style.backgroundColor = light;
+                moonMorph.style.left = "0";
+                moonMorph.style.transformOrigin = "right center";
+                moonMorph.style.transform = `scaleX(${phase / 0.25})`;
+            } 
+            else if (phase >= 0.25 && phase < 0.5) {
+                // Waxing Gibbous: Left side full light, right side filling up
+                moonLeft.style.backgroundColor = light;
+                moonRight.style.backgroundColor = dark;
+                moonMorph.style.backgroundColor = light;
+                moonMorph.style.left = "50%";
+                moonMorph.style.transformOrigin = "left center";
+                moonMorph.style.transform = `scaleX(${(phase - 0.25) / 0.25})`;
+            } 
+            else if (phase >= 0.5 && phase < 0.75) {
+                // Waning Gibbous: Left side starts fading back to shadow
+                moonLeft.style.backgroundColor = light;
+                moonRight.style.backgroundColor = light;
+                moonMorph.style.backgroundColor = dark;
+                moonMorph.style.left = "0";
+                moonMorph.style.transformOrigin = "right center";
+                moonMorph.style.transform = `scaleX(${(phase - 0.5) / 0.25})`;
+            } 
+            else {
+                // Waning Crescent: Dark shadow consumes everything except final right sliver
+                moonLeft.style.backgroundColor = dark;
+                moonRight.style.backgroundColor = light;
+                moonMorph.style.backgroundColor = dark;
+                moonMorph.style.left = "50%";
+                moonMorph.style.transformOrigin = "left center";
+                moonMorph.style.transform = `scaleX(${(phase - 0.75) / 0.25})`;
+            }
         }
 
         // --- AUTOMATED SEASON SELECTOR ---
@@ -591,29 +622,29 @@
             body.setAttribute('data-season', currentSeason);
         }
 
-        // --- ASTRONOMICAL DIAL MATHEMATICS (EAST TO WEST) ---
+        // --- DIAL PATHWAY MATRIX (RIGHT TO LEFT MOVEMENT) ---
         function renderCelestialPositions(currentTime) {
             const curHours = currentTime.getHours() + (currentTime.getMinutes() / 60);
             
-            let riseTime = customSunrise ? customSunrise.getHours() + (customSunrise.getMinutes() / 60) : 7.0;
-            let setTime = customSunset ? customSunset.getHours() + (customSunset.getMinutes() / 60) : 17.5;
+            let sunriseDec = customSunrise ? customSunrise.getHours() + (customSunrise.getMinutes() / 60) : 7.0;
+            let sunsetDec = customSunset ? customSunset.getHours() + (customSunset.getMinutes() / 60) : 17.5;
 
-            document.getElementById('solarMain').textContent = `Rise: ${formatTimeDec(riseTime)} | Set: ${formatTimeDec(setTime)}`;
+            document.getElementById('solarMain').textContent = `Rise: ${formatTimeDec(sunriseDec)} | Set: ${formatTimeDec(sunsetDec)}`;
 
-            let isDaytime = curHours >= riseTime && curHours <= setTime;
+            let isDaytime = curHours >= sunriseDec && curHours <= sunsetDec;
             let progressionFraction = 0;
 
             if (isDaytime) {
-                progressionFraction = (curHours - riseTime) / (setTime - riseTime);
+                progressionFraction = (curHours - sunriseDec) / (sunsetDec - sunriseDec);
                 sunOrb.style.display = 'block';
                 moonOrb.style.display = 'none';
                 starsOverlay.style.opacity = '0';
                 document.getElementById('solarSub').textContent = "Daylight Transit Sequence";
             } else {
-                if (curHours > setTime) {
-                    progressionFraction = (curHours - setTime) / (24 - setTime + riseTime);
+                if (curHours > sunsetDec) {
+                    progressionFraction = (curHours - sunsetDec) / (24 - sunsetDec + sunriseDec);
                 } else {
-                    progressionFraction = (24 - setTime + curHours) / (24 - setTime + riseTime);
+                    progressionFraction = (24 - sunsetDec + curHours) / (24 - sunsetDec + sunriseDec);
                 }
                 sunOrb.style.display = 'none';
                 moonOrb.style.display = 'block';
@@ -621,15 +652,18 @@
                 document.getElementById('solarSub').textContent = "Night Transition Sequence";
             }
 
+            // angle maps from 0 (East/Right) to PI (West/Left)
             const targetedAngle = progressionFraction * Math.PI;
+            
+            // Re-mapped structural polar transformations (Removes inverse mirroring)
             const coordinateX = 50 + (40 * Math.cos(targetedAngle)); 
             const coordinateY = 75 - (55 * Math.sin(targetedAngle));
 
             if (isDaytime) {
-                sunOrb.style.left = `${100 - coordinateX}%`;
+                sunOrb.style.left = `${coordinateX}%`;
                 sunOrb.style.top = `${coordinateY}%`;
             } else {
-                moonOrb.style.left = `${100 - coordinateX}%`;
+                moonOrb.style.left = `${coordinateX}%`;
                 moonOrb.style.top = `${coordinateY}%`;
             }
         }
@@ -646,16 +680,13 @@
             rainOverlay.style.display = "none";
             
             if (code === 0) {
-                weatherState = "clear";
                 cloudsOverlay.style.opacity = "0";
                 document.getElementById('weatherTxt').textContent = "Clear Skies";
             } else if (code >= 1 && code <= 3) {
-                weatherState = "cloudy";
                 cloudsOverlay.style.opacity = "1";
                 document.getElementById('weatherTxt').textContent = "Scattered Clouds";
                 generateProceduralClouds(5);
             } else {
-                weatherState = "stormy";
                 cloudsOverlay.style.opacity = "1";
                 rainOverlay.style.display = "block";
                 document.getElementById('weatherTxt').textContent = "Storm Precipitation";
