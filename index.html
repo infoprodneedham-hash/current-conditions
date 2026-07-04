@@ -13,8 +13,8 @@
             --ground-color: #0b132b;
             --accent-glow: #00b4d8;
             --text-main: #f8f9fa;
-            --panel-bg: rgba(15, 23, 42, 0.75);
-            --panel-border: rgba(0, 180, 216, 0.3);
+            --panel-bg: rgba(15, 23, 42, 0.8);
+            --panel-border: rgba(0, 180, 216, 0.35);
             --sun-color: #ffb703;
             --moon-color: #e2e8f0;
         }
@@ -24,7 +24,7 @@
             --horizon-glow: #ffbf69;
             --ground-color: #0d1f22;
             --accent-glow: #ff9f1c;
-            --panel-border: rgba(255, 159, 28, 0.3);
+            --panel-border: rgba(255, 159, 28, 0.35);
             --sun-color: #ffe49e;
         }
 
@@ -33,7 +33,7 @@
             --horizon-glow: #ecf39e;
             --ground-color: #111e15;
             --accent-glow: #52b788;
-            --panel-border: rgba(82, 183, 136, 0.3);
+            --panel-border: rgba(82, 183, 136, 0.35);
             --sun-color: #ffdd67;
         }
 
@@ -42,7 +42,7 @@
             --horizon-glow: #eddcd2;
             --ground-color: #1b120c;
             --accent-glow: #deab4a;
-            --panel-border: rgba(222, 171, 74, 0.3);
+            --panel-border: rgba(222, 171, 74, 0.35);
             --sun-color: #f4a261;
         }
 
@@ -123,13 +123,10 @@
         .sky-stage {
             position: relative;
             flex: 1;
-            min-height: 450px;
+            min-height: 500px;
             background: var(--sky-gradient);
             transition: background 1s ease;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
         }
 
         .stars-overlay {
@@ -169,13 +166,6 @@
             animation: drift 40s linear infinite;
         }
 
-        .cloud::before, .cloud::after {
-            content: '';
-            position: absolute;
-            background: rgba(255, 255, 255, 0.25);
-            border-radius: 100px;
-        }
-
         /* --- DIAL PATHWAY & ORBS --- */
         .dial-arc {
             position: absolute;
@@ -191,8 +181,8 @@
 
         .celestial-orb {
             position: absolute;
-            width: 50px;
-            height: 50px;
+            width: 55px;
+            height: 55px;
             border-radius: 50%;
             transform: translate(-50%, -50%);
             left: 50%;
@@ -214,14 +204,13 @@
             overflow: hidden;
         }
 
-        /* Procedural Moon Phase Mask */
         .moon-phase-shadow {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(10, 15, 30, 0.85);
+            background: rgba(10, 15, 30, 0.88);
             border-radius: 50%;
         }
 
@@ -234,7 +223,7 @@
             background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.4)), var(--ground-color);
             border-top: 2px solid var(--horizon-glow);
             box-shadow: 0 -10px 30px var(--horizon-glow);
-            z-index: 4;
+            z-index: 5;
             transition: all 1s ease;
         }
 
@@ -248,50 +237,59 @@
             background: transparent;
             pointer-events: none;
             display: none;
-            z-index: 5;
+            z-index: 4;
         }
 
-        /* --- TELEMETRY READOUTS --- */
+        /* --- HORIZON CENTERED TELEMETRY HUD --- */
         .dashboard-ui {
-            position: relative;
-            padding: 30px;
-            z-index: 6;
+            position: absolute;
+            bottom: 40px; /* Sitting directly flush on top of the horizon line */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 960px;
+            z-index: 6; /* Layered safely above the horizon line and weather elements */
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
             pointer-events: none;
         }
 
         .card {
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
-            backdrop-filter: blur(12px);
-            padding: 20px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 16px 20px;
             border-radius: 12px;
             pointer-events: auto;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s;
         }
 
         .card:hover {
             transform: translateY(-4px);
+            border-color: var(--accent-glow);
         }
 
         .card h3 {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 1.5px;
             color: var(--accent-glow);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .card p {
-            font-size: 1.6rem;
+            font-size: 1.35rem;
             font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .card .subtext {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             opacity: 0.7;
             font-weight: normal;
             margin-top: 4px;
@@ -300,24 +298,24 @@
         /* --- ANALOG CLOCK FOOTER --- */
         footer {
             background: var(--ground-color);
-            padding: 30px 20px;
+            padding: 25px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             border-top: 1px solid rgba(255, 255, 255, 0.05);
-            z-index: 6;
+            z-index: 7;
         }
 
         .clock-dial {
-            width: 140px;
-            height: 140px;
+            width: 130px;
+            height: 130px;
             border: 4px solid var(--panel-border);
             border-radius: 50%;
             position: relative;
             background: rgba(255,255,255,0.02);
             box-shadow: inset 0 0 20px rgba(0,0,0,0.6), 0 0 15px var(--panel-border);
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         .clock-hand {
@@ -326,24 +324,23 @@
             left: 50%;
             transform-origin: bottom center;
             border-radius: 4px;
-            background-color: var(--text-main);
         }
 
         .hour-hand {
             width: 4px;
-            height: 35px;
+            height: 32px;
             background-color: var(--text-main);
         }
 
         .minute-hand {
             width: 3px;
-            height: 50px;
+            height: 45px;
             background-color: var(--accent-glow);
         }
 
         .second-hand {
             width: 1.5px;
-            height: 55px;
+            height: 50px;
             background-color: #ff4757;
         }
 
@@ -360,19 +357,37 @@
         }
 
         .digital-date-string {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             letter-spacing: 1px;
             font-weight: 500;
             opacity: 0.9;
         }
 
-        /* --- WEATHER ANIMATIONS --- */
+        /* --- ANIMATIONS --- */
         @keyframes drift {
             0% { transform: translateX(-50%); }
             100% { transform: translateX(50%); }
         }
 
-        /* Responsive Optimization */
+        /* Responsive Optimization for Horizon Dock */
+        @media(max-width: 768px) {
+            .dashboard-ui {
+                grid-template-columns: 1fr;
+                bottom: 45px;
+                width: 95%;
+                gap: 8px;
+            }
+            .card {
+                padding: 10px 15px;
+            }
+            .card p {
+                font-size: 1.1rem;
+            }
+            .sky-stage {
+                min-height: 600px; /* Gives elements space to stack vertically on mobile */
+            }
+        }
+
         @media(max-width: 600px) {
             header { flex-direction: column; align-items: stretch; }
             .controls-left, .controls-right { justify-content: space-between; }
@@ -473,7 +488,7 @@
         let selectedCity = CITY_DIRECTORY.melbourne;
         let dynamicOffset = selectedCity.tz;
         let isDst = false;
-        let weatherState = "clear"; // clear, cloudy, stormy
+        let weatherState = "clear"; 
         let customSunrise = null;
         let customSunset = null;
 
@@ -502,7 +517,6 @@
             const minutes = targetDate.getMinutes();
             const seconds = targetDate.getSeconds();
 
-            // Analog rotations
             const hDeg = ((hours % 12) * 30) + (minutes * 0.5);
             const mDeg = (minutes * 6) + (seconds * 0.1);
             const sDeg = seconds * 6;
@@ -511,14 +525,12 @@
             document.getElementById('mHand').style.transform = `translate(-50%, 0) rotate(${mDeg}deg)`;
             document.getElementById('sHand').style.transform = `translate(-50%, 0) rotate(${sDeg}deg)`;
 
-            // Date output formatting
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
             dateDisplay.textContent = targetDate.toLocaleDateString('en-US', options);
         }
 
         // --- CALCULATE LUNAR PHASES ---
         function updateLunarCycle(date) {
-            // Known baseline New Moon: January 6, 2000
             const baseNewMoon = new Date(2000, 0, 6, 18, 14, 0);
             const totalMsDiff = date.getTime() - baseNewMoon.getTime();
             const totalDaysDiff = totalMsDiff / (1000 * 60 * 60 * 24);
@@ -557,14 +569,12 @@
 
             document.getElementById('lunarTxt').textContent = phaseName;
             document.getElementById('lunarSub').textContent = `Cycle Value: ${(phaseNormalized * 100).toFixed(1)}%`;
-            
-            // Render the shadow layer on the structural moon element
             moonShadow.style.cssText = shadowStyle;
         }
 
         // --- AUTOMATED SEASON SELECTOR ---
         function updateSeasonalTheme(date, hemisphere) {
-            const currentMonth = date.getMonth(); // 0-indexed (July is 6)
+            const currentMonth = date.getMonth(); 
             let currentSeason = "winter";
 
             if (hemisphere === "S") {
@@ -585,24 +595,21 @@
         function renderCelestialPositions(currentTime) {
             const curHours = currentTime.getHours() + (currentTime.getMinutes() / 60);
             
-            // Fallback default solar operational framework if network API calls are pending
             let riseTime = customSunrise ? customSunrise.getHours() + (customSunrise.getMinutes() / 60) : 7.0;
             let setTime = customSunset ? customSunset.getHours() + (customSunset.getMinutes() / 60) : 17.5;
 
             document.getElementById('solarMain').textContent = `Rise: ${formatTimeDec(riseTime)} | Set: ${formatTimeDec(setTime)}`;
 
             let isDaytime = curHours >= riseTime && curHours <= setTime;
-            
-            // Map trajectory curve percentage values
             let progressionFraction = 0;
+
             if (isDaytime) {
                 progressionFraction = (curHours - riseTime) / (setTime - riseTime);
                 sunOrb.style.display = 'block';
                 moonOrb.style.display = 'none';
                 starsOverlay.style.opacity = '0';
-                document.getElementById('solarSub').textContent = "Daylight Transit Sequence Active";
+                document.getElementById('solarSub').textContent = "Daylight Transit Sequence";
             } else {
-                // Night calculations
                 if (curHours > setTime) {
                     progressionFraction = (curHours - setTime) / (24 - setTime + riseTime);
                 } else {
@@ -611,18 +618,13 @@
                 sunOrb.style.display = 'none';
                 moonOrb.style.display = 'block';
                 starsOverlay.style.opacity = '1';
-                document.getElementById('solarSub').textContent = "Night Transition Sequence Active";
+                document.getElementById('solarSub').textContent = "Night Transition Sequence";
             }
 
-            // Map standard polar coordinates onto the dashboard layout arc bounding frame.
-            // Angle: 0 radians = Right (East), PI/2 = Center Top (Midday/Midnight), PI = Left (West)
             const targetedAngle = progressionFraction * Math.PI;
-            
-            // Structural spatial mapping offsets
             const coordinateX = 50 + (40 * Math.cos(targetedAngle)); 
             const coordinateY = 75 - (55 * Math.sin(targetedAngle));
 
-            // Set positions smoothly via standard horizontal CSS updates
             if (isDaytime) {
                 sunOrb.style.left = `${100 - coordinateX}%`;
                 sunOrb.style.top = `${coordinateY}%`;
@@ -640,8 +642,6 @@
 
         // --- GRAPHICAL WEATHER COMPOSITOR ENGINE ---
         function processVisualWeatherEffects(code) {
-            // Mapping system using Open-Meteo operational WMO parameters
-            // 0 = Clear, 1-3 = Partial Clouds, 51-67 / 80-82 = Rain/Storm
             cloudsOverlay.innerHTML = "";
             rainOverlay.style.display = "none";
             
@@ -659,7 +659,7 @@
                 cloudsOverlay.style.opacity = "1";
                 rainOverlay.style.display = "block";
                 document.getElementById('weatherTxt').textContent = "Storm Precipitation";
-                generateProceduralClouds(12);
+                generateProceduralClouds(10);
                 generateProceduralRain();
             }
         }
@@ -668,20 +668,20 @@
             for (let i = 0; i < volume; i++) {
                 const cloudNode = document.createElement('div');
                 cloudNode.className = 'cloud';
-                let w = 120 + Math.random() * 150;
+                let w = 110 + Math.random() * 130;
                 let h = w * 0.4;
                 cloudNode.style.width = `${w}px`;
                 cloudNode.style.height = `${h}px`;
-                cloudNode.style.top = `${10 + Math.random() * 45}%`;
+                cloudNode.style.top = `${8 + Math.random() * 32}%`;
                 cloudNode.style.left = `${Math.random() * 100}%`;
-                cloudNode.style.animationDuration = `${30 + Math.random() * 40}s`;
+                cloudNode.style.animationDuration = `${35 + Math.random() * 45}s`;
                 cloudsOverlay.appendChild(cloudNode);
             }
         }
 
         function generateProceduralRain() {
             rainOverlay.innerHTML = "";
-            const streamVolume = 60;
+            const streamVolume = 50;
             let cssInjections = "";
             for (let i = 0; i < streamVolume; i++) {
                 const drop = document.createElement('div');
@@ -710,7 +710,7 @@
             rainOverlay.appendChild(structuralSheet);
         }
 
-        // --- NETWORK API SYNCHRONIZATION (OPEN-METEO ENGINE) ---
+        // --- NETWORK API SYNCHRONIZATION ---
         async function fetchLiveTelemetryData() {
             try {
                 const targetUrl = `https://api.open-meteo.com/v1/forecast?latitude=${selectedCity.lat}&longitude=${selectedCity.lon}&current=temperature_2m,weather_code&daily=sunrise,sunset&timezone=auto`;
@@ -719,12 +719,10 @@
                 
                 const data = await queryResponse.json();
                 
-                // Read current values
                 const currentTemp = data.current.temperature_2m;
                 const weatherCode = data.current.weather_code;
-                document.getElementById('tempTxt').textContent = `${currentTemp}°C • Calculated Data Sync Active`;
+                document.getElementById('tempTxt').textContent = `${currentTemp}°C • Live Sync Active`;
                 
-                // Read custom structural solar constraints
                 if(data.daily && data.daily.sunrise && data.daily.sunset) {
                     customSunrise = new Date(data.daily.sunrise[0]);
                     customSunset = new Date(data.daily.sunset[0]);
@@ -733,10 +731,10 @@
                 processVisualWeatherEffects(weatherCode);
             } catch (err) {
                 console.warn("API fallback triggered: Using offline math matrices.", err);
-                document.getElementById('tempTxt').textContent = "System Offline • Math Simulation Matrix Active";
+                document.getElementById('tempTxt').textContent = "Simulation Matrix Active";
                 customSunrise = null;
                 customSunset = null;
-                processVisualWeatherEffects(0); // Default to clean layout on system interrupt
+                processVisualWeatherEffects(0); 
             }
         }
 
@@ -754,7 +752,6 @@
         document.getElementById('manualCity').addEventListener('input', debounce((e) => {
             const rawVal = e.target.value.toLowerCase().trim();
             if (rawVal.length > 2) {
-                // Scan inner pre-registries
                 for (let matchKey in CITY_DIRECTORY) {
                     if (CITY_DIRECTORY[matchKey].name.toLowerCase().includes(rawVal)) {
                         selectedCity = CITY_DIRECTORY[matchKey];
@@ -763,7 +760,6 @@
                         return;
                     }
                 }
-                // Custom programmatic fallback coordinates loop for simulation variables
                 selectedCity = { name: e.target.value, lat: -33.8, lon: 151.2, tz: 10, hem: "S" };
                 syncSystemDashboard();
             }
@@ -805,10 +801,8 @@
             renderCelestialPositions(activeTime);
         }, 1000);
 
-        // Slow System Diagnostics Sync (Re-fetch remote APIs every 5 minutes)
         setInterval(fetchLiveTelemetryData, 300000);
 
-        // Core Startup Sequence
         syncSystemDashboard();
     </script>
 </body>
