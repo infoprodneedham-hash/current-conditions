@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Celestial Dashboard & Landing Page</title>
+    <style>
+        /* --- DESIGN SYSTEM & SEASONAL THEMES --- */
+        :root {
+            /* Default Winter Theme (Deep, Frosty, High-Contrast) */
+            --sky-gradient: linear-gradient(to bottom, #0d1b2a, #1b263b, #415a77);
+            --horizon-glow: #e0e1dd;
+            --ground-color: #0b132b;
+            --accent-glow: #00b4d8;
+            --text-main: #f8f9fa;
+            --panel-bg: rgba(15, 23, 42, 0.75);
+            --panel-border: rgba(0, 180, 216, 0.3);
+            --sun-color: #ffb703;
+            --moon-color: #e2e8f0;
+        }
+
+        [data-season="summer"] {
+            --sky-gradient: linear-gradient(to bottom, #1a303a, #297373, #ff9f1c);
+            --horizon-glow: #ffbf69;
+            --ground-color: #0d1f22;
+            --accent-glow: #ff9f1c;
+            --panel-border: rgba(255, 159, 28, 0.3);
+            --sun-color: #ffe49e;
+        }
+
+        [data-season="spring"] {
+            --sky-gradient: linear-gradient(to bottom, #132a13, #31572c, #90a955);
+            --horizon-glow: #ecf39e;
+            --ground-color: #111e15;
+            --accent-glow: #52b788;
+            --panel-border: rgba(82, 183, 136, 0.3);
+            --sun-color: #ffdd67;
+        }
+
+        [data-season="autumn"] {
+            --sky-gradient: linear-gradient(to bottom, #281c16, #6f4e37, #b07d62);
+            --horizon-glow: #eddcd2;
+            --ground-color: #1b120c;
+            --accent-glow: #deab4a;
+            --panel-border: rgba(222, 171, 74, 0.3);
+            --sun-color: #f4a261;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--ground-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            transition: background 1s ease;
+        }
+
+        /* --- CONTROL PANEL --- */
+        header {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            padding: 15px 25px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .controls-left, .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input, select, button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: bold;
+            background: var(--panel-bg);
+            border-color: var(--panel-border);
+        }
+
+        button:hover {
+            background: var(--accent-glow);
+            color: #000;
+        }
+
+        .dst-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        /* --- CELESTIAL CANVAS & HORIZON --- */
+        .sky-stage {
+            position: relative;
+            flex: 1;
+            min-height: 450px;
+            background: var(--sky-gradient);
+            transition: background 1s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .stars-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+                radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
+                radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 20px);
+            background-size: 550px 550px, 350px 350px, 250px 250px;
+            background-position: 0 0, 40px 60px, 130px 270px;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+            pointer-events: none;
+        }
+
+        .weather-clouds {
+            position: absolute;
+            width: 200%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transition: opacity 1s ease;
+            pointer-events: none;
+            background: transparent;
+        }
+
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 100px;
+            filter: blur(8px);
+            animation: drift 40s linear infinite;
+        }
+
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 100px;
+        }
+
+        /* --- DIAL PATHWAY & ORBS --- */
+        .dial-arc {
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            top: 15%;
+            bottom: 0;
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-bottom: none;
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+            pointer-events: none;
+        }
+
+        .celestial-orb {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            left: 50%;
+            top: 50%;
+            transition: left 0.5s cubic-bezier(0.1, 0.8, 0.3, 1), top 0.5s cubic-bezier(0.1, 0.8, 0.3, 1), box-shadow 0.5s;
+            z-index: 3;
+        }
+
+        .sun {
+            background: radial-gradient(circle, #ffffff 20%, var(--sun-color) 60%, transparent 100%);
+            box-shadow: 0 0 30px var(--sun-color), 0 0 60px var(--sun-color);
+            display: none;
+        }
+
+        .moon {
+            background: radial-gradient(circle, #ffffff 40%, var(--moon-color) 80%);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+            display: none;
+            overflow: hidden;
+        }
+
+        /* Procedural Moon Phase Mask */
+        .moon-phase-shadow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 15, 30, 0.85);
+            border-radius: 50%;
+        }
+
+        .horizon-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.4)), var(--ground-color);
+            border-top: 2px solid var(--horizon-glow);
+            box-shadow: 0 -10px 30px var(--horizon-glow);
+            z-index: 4;
+            transition: all 1s ease;
+        }
+
+        /* --- WEATHER OVERLAYS --- */
+        .storm-rain {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: transparent;
+            pointer-events: none;
+            display: none;
+            z-index: 5;
+        }
+
+        /* --- TELEMETRY READOUTS --- */
+        .dashboard-ui {
+            position: relative;
+            padding: 30px;
+            z-index: 6;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            pointer-events: none;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(12px);
+            padding: 20px;
+            border-radius: 12px;
+            pointer-events: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent-glow);
+            margin-bottom: 8px;
+        }
+
+        .card p {
+            font-size: 1.6rem;
+            font-weight: 600;
+        }
+
+        .card .subtext {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            font-weight: normal;
+            margin-top: 4px;
+        }
+
+        /* --- ANALOG CLOCK FOOTER --- */
+        footer {
+            background: var(--ground-color);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 6;
+        }
+
+        .clock-dial {
+            width: 140px;
+            height: 140px;
+            border: 4px solid var(--panel-border);
+            border-radius: 50%;
+            position: relative;
+            background: rgba(255,255,255,0.02);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6), 0 0 15px var(--panel-border);
+            margin-bottom: 15px;
+        }
+
+        .clock-hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            border-radius: 4px;
+            background-color: var(--text-main);
+        }
+
+        .hour-hand {
+            width: 4px;
+            height: 35px;
+            background-color: var(--text-main);
+        }
+
+        .minute-hand {
+            width: 3px;
+            height: 50px;
+            background-color: var(--accent-glow);
+        }
+
+        .second-hand {
+            width: 1.5px;
+            height: 55px;
+            background-color: #ff4757;
+        }
+
+        .clock-center {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #fff;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .digital-date-string {
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        /* --- WEATHER ANIMATIONS --- */
+        @keyframes drift {
+            0% { transform: translateX(-50%); }
+            100% { transform: translateX(50%); }
+        }
+
+        /* Responsive Optimization */
+        @media(max-width: 600px) {
+            header { flex-direction: column; align-items: stretch; }
+            .controls-left, .controls-right { justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="controls-left">
+            <label for="citySelect">Location:</label>
+            <select id="citySelect">
+                <option value="melbourne" selected>Melbourne (Nearest Capital)</option>
+                <option value="sydney">Sydney</option>
+                <option value="brisbane">Brisbane</option>
+                <option value="adelaide">Adelaide</option>
+                <option value="perth">Perth</option>
+                <option value="hobart">Hobart</option>
+                <option value="canberra">Canberra</option>
+                <option value="darwin">Darwin</option>
+                <option value="london">London</option>
+                <option value="tokyo">Tokyo</option>
+                <option value="newyork">New York</option>
+            </select>
+            <input type="text" id="manualCity" placeholder="Or type any city..." style="width: 140px;">
+        </div>
+        <div class="controls-right">
+            <span>Timezone:</span>
+            <button id="tzMinus">—</button>
+            <span id="tzDisplay" style="font-family: monospace; font-weight: bold;">GMT +10.0</span>
+            <button id="tzPlus">+</button>
+            <label class="dst-container">
+                <input type="checkbox" id="dstCheck"> DST (+1h)
+            </label>
+        </div>
+    </header>
+
+    <main class="sky-stage" id="skyStage">
+        <div class="stars-overlay" id="starsOverlay"></div>
+        <div class="weather-clouds" id="cloudsOverlay"></div>
+        <div class="storm-rain" id="rainOverlay"></div>
+        
+        <div class="dial-arc"></div>
+
+        <div class="celestial-orb sun" id="sunOrb"></div>
+        <div class="celestial-orb moon" id="moonOrb">
+            <div class="moon-phase-shadow" id="moonShadow"></div>
+        </div>
+
+        <div class="dashboard-ui">
+            <div class="card">
+                <h3>Current Weather</h3>
+                <p id="weatherTxt">Loading...</p>
+                <div class="subtext" id="tempTxt">Syncing telemetry data...</div>
+            </div>
+            <div class="card">
+                <h3>Solar Schedule</h3>
+                <p id="solarMain">--:--</p>
+                <div class="subtext" id="solarSub">Calculating positioning values...</div>
+            </div>
+            <div class="card">
+                <h3>Lunar Phase</h3>
+                <p id="lunarTxt">Calculating...</p>
+                <div class="subtext" id="lunarSub">Cycle fraction: --</div>
+            </div>
+        </div>
+
+        <div class="horizon-line"></div>
+    </main>
+
+    <footer>
+        <div class="clock-dial">
+            <div class="clock-center"></div>
+            <div class="clock-hand hour-hand" id="hHand"></div>
+            <div class="clock-hand minute-hand" id="mHand"></div>
+            <div class="clock-hand second-hand" id="sHand"></div>
+        </div>
+        <div class="digital-date-string" id="dateDisplay">Saturday, July 4, 2026</div>
+    </footer>
+
+    <script>
+        // --- DATA REGISTRY & GEOLOCATION DATABASE ---
+        const CITY_DIRECTORY = {
+            melbourne: { name: "Melbourne", lat: -37.8136, lon: 144.9631, tz: 10, hem: "S" },
+            sydney: { name: "Sydney", lat: -33.8688, lon: 151.2093, tz: 10, hem: "S" },
+            brisbane: { name: "Brisbane", lat: -27.4705, lon: 153.0260, tz: 10, hem: "S" },
+            adelaide: { name: "Adelaide", lat: -34.9285, lon: 138.6007, tz: 9.5, hem: "S" },
+            perth: { name: "Perth", lat: -31.9505, lon: 115.8605, tz: 8, hem: "S" },
+            hobart: { name: "Hobart", lat: -42.8821, lon: 147.3272, tz: 10, hem: "S" },
+            canberra: { name: "Canberra", lat: -35.2809, lon: 149.1300, tz: 10, hem: "S" },
+            darwin: { name: "Darwin", lat: -12.4634, lon: 130.8456, tz: 9.5, hem: "S" },
+            london: { name: "London", lat: 51.5074, lon: -0.1278, tz: 0, hem: "N" },
+            tokyo: { name: "Tokyo", lat: 35.6762, lon: 139.6503, tz: 9, hem: "N" },
+            newyork: { name: "New York", lat: 40.7128, lon: -74.0060, tz: -5, hem: "N" }
+        };
+
+        // State Tracking
+        let selectedCity = CITY_DIRECTORY.melbourne;
+        let dynamicOffset = selectedCity.tz;
+        let isDst = false;
+        let weatherState = "clear"; // clear, cloudy, stormy
+        let customSunrise = null;
+        let customSunset = null;
+
+        // Element DOM Mapping
+        const body = document.documentElement;
+        const sunOrb = document.getElementById('sunOrb');
+        const moonOrb = document.getElementById('moonOrb');
+        const moonShadow = document.getElementById('moonShadow');
+        const skyStage = document.getElementById('skyStage');
+        const starsOverlay = document.getElementById('starsOverlay');
+        const cloudsOverlay = document.getElementById('cloudsOverlay');
+        const rainOverlay = document.getElementById('rainOverlay');
+        const tzDisplay = document.getElementById('tzDisplay');
+        const dateDisplay = document.getElementById('dateDisplay');
+        
+        // --- TIME ENGINE PROCESSING ---
+        function getTargetTime() {
+            const systemDate = new Date();
+            const utcTime = systemDate.getTime() + (systemDate.getTimezoneOffset() * 60000);
+            let finalOffset = dynamicOffset + (isDst ? 1 : 0);
+            return new Date(utcTime + (3600000 * finalOffset));
+        }
+
+        function updateClockUI(targetDate) {
+            const hours = targetDate.getHours();
+            const minutes = targetDate.getMinutes();
+            const seconds = targetDate.getSeconds();
+
+            // Analog rotations
+            const hDeg = ((hours % 12) * 30) + (minutes * 0.5);
+            const mDeg = (minutes * 6) + (seconds * 0.1);
+            const sDeg = seconds * 6;
+
+            document.getElementById('hHand').style.transform = `translate(-50%, 0) rotate(${hDeg}deg)`;
+            document.getElementById('mHand').style.transform = `translate(-50%, 0) rotate(${mDeg}deg)`;
+            document.getElementById('sHand').style.transform = `translate(-50%, 0) rotate(${sDeg}deg)`;
+
+            // Date output formatting
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            dateDisplay.textContent = targetDate.toLocaleDateString('en-US', options);
+        }
+
+        // --- CALCULATE LUNAR PHASES ---
+        function updateLunarCycle(date) {
+            // Known baseline New Moon: January 6, 2000
+            const baseNewMoon = new Date(2000, 0, 6, 18, 14, 0);
+            const totalMsDiff = date.getTime() - baseNewMoon.getTime();
+            const totalDaysDiff = totalMsDiff / (1000 * 60 * 60 * 24);
+            const synodicCycle = 29.530588853;
+            const absolutePhase = (totalDaysDiff % synodicCycle) / synodicCycle;
+            const phaseNormalized = absolutePhase < 0 ? absolutePhase + 1 : absolutePhase;
+
+            let phaseName = "";
+            let shadowStyle = "";
+
+            if (phaseNormalized < 0.03 || phaseNormalized > 0.97) {
+                phaseName = "New Moon";
+                shadowStyle = "inset 0 0 40px rgba(0,0,0,0.95)";
+            } else if (phaseNormalized >= 0.03 && phaseNormalized < 0.22) {
+                phaseName = "Waxing Crescent";
+                shadowStyle = "box-shadow: inset -22px 0 0 0 rgba(0,0,0,0.85);";
+            } else if (phaseNormalized >= 0.22 && phaseNormalized < 0.28) {
+                phaseName = "First Quarter";
+                shadowStyle = "box-shadow: inset -25px 0 0 0 rgba(0,0,0,0.85);";
+            } else if (phaseNormalized >= 0.28 && phaseNormalized < 0.47) {
+                phaseName = "Waxing Gibbous";
+                shadowStyle = "box-shadow: inset -10px 0 0 0 rgba(0,0,0,0.4);";
+            } else if (phaseNormalized >= 0.47 && phaseNormalized < 0.53) {
+                phaseName = "Full Moon";
+                shadowStyle = "box-shadow: inset 0 0 0 0 transparent;";
+            } else if (phaseNormalized >= 0.53 && phaseNormalized < 0.72) {
+                phaseName = "Waning Gibbous";
+                shadowStyle = "box-shadow: inset 10px 0 0 0 rgba(0,0,0,0.4);";
+            } else if (phaseNormalized >= 0.72 && phaseNormalized < 0.78) {
+                phaseName = "Last Quarter";
+                shadowStyle = "box-shadow: inset 25px 0 0 0 rgba(0,0,0,0.85);";
+            } else {
+                phaseName = "Waning Crescent";
+                shadowStyle = "box-shadow: inset 22px 0 0 0 rgba(0,0,0,0.85);";
+            }
+
+            document.getElementById('lunarTxt').textContent = phaseName;
+            document.getElementById('lunarSub').textContent = `Cycle Value: ${(phaseNormalized * 100).toFixed(1)}%`;
+            
+            // Render the shadow layer on the structural moon element
+            moonShadow.style.cssText = shadowStyle;
+        }
+
+        // --- AUTOMATED SEASON SELECTOR ---
+        function updateSeasonalTheme(date, hemisphere) {
+            const currentMonth = date.getMonth(); // 0-indexed (July is 6)
+            let currentSeason = "winter";
+
+            if (hemisphere === "S") {
+                if (currentMonth >= 11 || currentMonth <= 1) currentSeason = "summer";
+                else if (currentMonth >= 2 && currentMonth <= 4) currentSeason = "autumn";
+                else if (currentMonth >= 5 && currentMonth <= 7) currentSeason = "winter";
+                else currentSeason = "spring";
+            } else {
+                if (currentMonth >= 11 || currentMonth <= 1) currentSeason = "winter";
+                else if (currentMonth >= 2 && currentMonth <= 4) currentSeason = "spring";
+                else if (currentMonth >= 5 && currentMonth <= 7) currentSeason = "summer";
+                else currentSeason = "autumn";
+            }
+            body.setAttribute('data-season', currentSeason);
+        }
+
+        // --- ASTRONOMICAL DIAL MATHEMATICS (EAST TO WEST) ---
+        function renderCelestialPositions(currentTime) {
+            const curHours = currentTime.getHours() + (currentTime.getMinutes() / 60);
+            
+            // Fallback default solar operational framework if network API calls are pending
+            let riseTime = customSunrise ? customSunrise.getHours() + (customSunrise.getMinutes() / 60) : 7.0;
+            let setTime = customSunset ? customSunset.getHours() + (customSunset.getMinutes() / 60) : 17.5;
+
+            document.getElementById('solarMain').textContent = `Rise: ${formatTimeDec(riseTime)} | Set: ${formatTimeDec(setTime)}`;
+
+            let isDaytime = curHours >= riseTime && curHours <= setTime;
+            
+            // Map trajectory curve percentage values
+            let progressionFraction = 0;
+            if (isDaytime) {
+                progressionFraction = (curHours - riseTime) / (setTime - riseTime);
+                sunOrb.style.display = 'block';
+                moonOrb.style.display = 'none';
+                starsOverlay.style.opacity = '0';
+                document.getElementById('solarSub').textContent = "Daylight Transit Sequence Active";
+            } else {
+                // Night calculations
+                if (curHours > setTime) {
+                    progressionFraction = (curHours - setTime) / (24 - setTime + riseTime);
+                } else {
+                    progressionFraction = (24 - setTime + curHours) / (24 - setTime + riseTime);
+                }
+                sunOrb.style.display = 'none';
+                moonOrb.style.display = 'block';
+                starsOverlay.style.opacity = '1';
+                document.getElementById('solarSub').textContent = "Night Transition Sequence Active";
+            }
+
+            // Map standard polar coordinates onto the dashboard layout arc bounding frame.
+            // Angle: 0 radians = Right (East), PI/2 = Center Top (Midday/Midnight), PI = Left (West)
+            const targetedAngle = progressionFraction * Math.PI;
+            
+            // Structural spatial mapping offsets
+            const coordinateX = 50 + (40 * Math.cos(targetedAngle)); 
+            const coordinateY = 75 - (55 * Math.sin(targetedAngle));
+
+            // Set positions smoothly via standard horizontal CSS updates
+            if (isDaytime) {
+                sunOrb.style.left = `${100 - coordinateX}%`;
+                sunOrb.style.top = `${coordinateY}%`;
+            } else {
+                moonOrb.style.left = `${100 - coordinateX}%`;
+                moonOrb.style.top = `${coordinateY}%`;
+            }
+        }
+
+        function formatTimeDec(decimalHours) {
+            const hrs = Math.floor(decimalHours);
+            const mins = Math.floor((decimalHours - hrs) * 60).toString().padStart(2, '0');
+            return `${hrs}:${mins}`;
+        }
+
+        // --- GRAPHICAL WEATHER COMPOSITOR ENGINE ---
+        function processVisualWeatherEffects(code) {
+            // Mapping system using Open-Meteo operational WMO parameters
+            // 0 = Clear, 1-3 = Partial Clouds, 51-67 / 80-82 = Rain/Storm
+            cloudsOverlay.innerHTML = "";
+            rainOverlay.style.display = "none";
+            
+            if (code === 0) {
+                weatherState = "clear";
+                cloudsOverlay.style.opacity = "0";
+                document.getElementById('weatherTxt').textContent = "Clear Skies";
+            } else if (code >= 1 && code <= 3) {
+                weatherState = "cloudy";
+                cloudsOverlay.style.opacity = "1";
+                document.getElementById('weatherTxt').textContent = "Scattered Clouds";
+                generateProceduralClouds(5);
+            } else {
+                weatherState = "stormy";
+                cloudsOverlay.style.opacity = "1";
+                rainOverlay.style.display = "block";
+                document.getElementById('weatherTxt').textContent = "Storm Precipitation";
+                generateProceduralClouds(12);
+                generateProceduralRain();
+            }
+        }
+
+        function generateProceduralClouds(volume) {
+            for (let i = 0; i < volume; i++) {
+                const cloudNode = document.createElement('div');
+                cloudNode.className = 'cloud';
+                let w = 120 + Math.random() * 150;
+                let h = w * 0.4;
+                cloudNode.style.width = `${w}px`;
+                cloudNode.style.height = `${h}px`;
+                cloudNode.style.top = `${10 + Math.random() * 45}%`;
+                cloudNode.style.left = `${Math.random() * 100}%`;
+                cloudNode.style.animationDuration = `${30 + Math.random() * 40}s`;
+                cloudsOverlay.appendChild(cloudNode);
+            }
+        }
+
+        function generateProceduralRain() {
+            rainOverlay.innerHTML = "";
+            const streamVolume = 60;
+            let cssInjections = "";
+            for (let i = 0; i < streamVolume; i++) {
+                const drop = document.createElement('div');
+                drop.style.cssText = `
+                    position: absolute;
+                    width: 2px;
+                    height: 25px;
+                    background: linear-gradient(transparent, rgba(255,255,255,0.4));
+                    top: -30px;
+                    left: ${Math.random() * 100}%;
+                    opacity: ${0.3 + Math.random() * 0.6};
+                    animation: fall-${i} ${0.6 + Math.random() * 0.5}s linear infinite;
+                    animation-delay: ${Math.random() * 1.5}s;
+                `;
+                
+                cssInjections += `
+                    @keyframes fall-${i} {
+                        0% { top: -30px; transform: translateX(0); }
+                        100% { top: 100%; transform: translateX(-20px); }
+                    }
+                `;
+                rainOverlay.appendChild(drop);
+            }
+            const structuralSheet = document.createElement("style");
+            structuralSheet.innerText = cssInjections;
+            rainOverlay.appendChild(structuralSheet);
+        }
+
+        // --- NETWORK API SYNCHRONIZATION (OPEN-METEO ENGINE) ---
+        async function fetchLiveTelemetryData() {
+            try {
+                const targetUrl = `https://api.open-meteo.com/v1/forecast?latitude=${selectedCity.lat}&longitude=${selectedCity.lon}&current=temperature_2m,weather_code&daily=sunrise,sunset&timezone=auto`;
+                const queryResponse = await fetch(targetUrl);
+                if (!queryResponse.ok) throw new Error("Telemetry payload failure");
+                
+                const data = await queryResponse.json();
+                
+                // Read current values
+                const currentTemp = data.current.temperature_2m;
+                const weatherCode = data.current.weather_code;
+                document.getElementById('tempTxt').textContent = `${currentTemp}°C • Calculated Data Sync Active`;
+                
+                // Read custom structural solar constraints
+                if(data.daily && data.daily.sunrise && data.daily.sunset) {
+                    customSunrise = new Date(data.daily.sunrise[0]);
+                    customSunset = new Date(data.daily.sunset[0]);
+                }
+                
+                processVisualWeatherEffects(weatherCode);
+            } catch (err) {
+                console.warn("API fallback triggered: Using offline math matrices.", err);
+                document.getElementById('tempTxt').textContent = "System Offline • Math Simulation Matrix Active";
+                customSunrise = null;
+                customSunset = null;
+                processVisualWeatherEffects(0); // Default to clean layout on system interrupt
+            }
+        }
+
+        // --- INTERACTION EVENT LIFECYCLE LISTENERS ---
+        document.getElementById('citySelect').addEventListener('change', (e) => {
+            const dataKey = e.target.value;
+            if (CITY_DIRECTORY[dataKey]) {
+                selectedCity = CITY_DIRECTORY[dataKey];
+                dynamicOffset = selectedCity.tz;
+                document.getElementById('manualCity').value = "";
+                syncSystemDashboard();
+            }
+        });
+
+        document.getElementById('manualCity').addEventListener('input', debounce((e) => {
+            const rawVal = e.target.value.toLowerCase().trim();
+            if (rawVal.length > 2) {
+                // Scan inner pre-registries
+                for (let matchKey in CITY_DIRECTORY) {
+                    if (CITY_DIRECTORY[matchKey].name.toLowerCase().includes(rawVal)) {
+                        selectedCity = CITY_DIRECTORY[matchKey];
+                        dynamicOffset = selectedCity.tz;
+                        syncSystemDashboard();
+                        return;
+                    }
+                }
+                // Custom programmatic fallback coordinates loop for simulation variables
+                selectedCity = { name: e.target.value, lat: -33.8, lon: 151.2, tz: 10, hem: "S" };
+                syncSystemDashboard();
+            }
+        }, 600));
+
+        document.getElementById('tzMinus').addEventListener('click', () => { dynamicOffset -= 0.5; updateTzDisplay(); });
+        document.getElementById('tzPlus').addEventListener('click', () => { dynamicOffset += 0.5; updateTzDisplay(); });
+        document.getElementById('dstCheck').addEventListener('change', (e) => { isDst = e.target.checked; updateTzDisplay(); });
+
+        function updateTzDisplay() {
+            const localizedVal = (dynamicOffset >= 0 ? "+" : "") + dynamicOffset.toFixed(1);
+            tzDisplay.textContent = `GMT ${localizedVal}`;
+        }
+
+        function debounce(func, delayDelay) {
+            let timerContext;
+            return function (...args) {
+                clearTimeout(timerContext);
+                timerContext = setTimeout(() => func.apply(this, args), delayDelay);
+            };
+        }
+
+        // --- EXECUTIVE LIFECYCLE INITIALIZER ---
+        function syncSystemDashboard() {
+            updateTzDisplay();
+            fetchLiveTelemetryData().then(() => {
+                const targetTime = getTargetTime();
+                updateClockUI(targetTime);
+                updateLunarCycle(targetTime);
+                updateSeasonalTheme(targetTime, selectedCity.hem);
+                renderCelestialPositions(targetTime);
+            });
+        }
+
+        // Heartbeat Engine Tick (1000ms Loop Refresh)
+        setInterval(() => {
+            const activeTime = getTargetTime();
+            updateClockUI(activeTime);
+            renderCelestialPositions(activeTime);
+        }, 1000);
+
+        // Slow System Diagnostics Sync (Re-fetch remote APIs every 5 minutes)
+        setInterval(fetchLiveTelemetryData, 300000);
+
+        // Core Startup Sequence
+        syncSystemDashboard();
+    </script>
+</body>
+</html>
